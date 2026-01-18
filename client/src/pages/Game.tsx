@@ -25,43 +25,23 @@ interface GameState {
     const streetViewElement = document.getElementById('street-view');
     if (!streetViewElement) return;
     
-    // Create a canvas overlay for targeted blurring
+    // Create a div overlay for ground-level blur only
     let blurOverlay = document.getElementById('street-view-blur-overlay');
     if (blurOverlay) blurOverlay.remove();
     
-    const canvas = document.createElement('canvas');
-    canvas.id = 'street-view-blur-overlay';
-    canvas.style.position = 'absolute';
-    canvas.style.top = '0';
-    canvas.style.left = '0';
-    canvas.style.pointerEvents = 'none';
-    canvas.style.zIndex = '10';
+    const overlay = document.createElement('div');
+    overlay.id = 'street-view-blur-overlay';
+    overlay.style.position = 'absolute';
+    overlay.style.bottom = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '25%';
+    overlay.style.pointerEvents = 'none';
+    overlay.style.zIndex = '10';
+    overlay.style.backdropFilter = 'blur(6px)';
+    overlay.style.background = 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.05) 100%)';
     
-    const rect = streetViewElement.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    // Create a semi-transparent blur effect for the bottom portion of the image
-    // where street names typically appear on the ground
-    const blurHeight = Math.floor(rect.height * 0.25); // Bottom 25% of image
-    const blurY = rect.height - blurHeight;
-    
-    // Apply a gradient blur mask from top to bottom
-    const gradient = ctx.createLinearGradient(0, blurY - 50, 0, blurY + blurHeight);
-    gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
-    
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, blurY - 50, rect.width, blurHeight + 50);
-    
-    // Apply blur filter to the canvas overlay
-    canvas.style.backdropFilter = 'blur(8px)';
-    // webkit backdrop filter for better browser support
-    
-    streetViewElement.parentElement?.appendChild(canvas);
+    streetViewElement.parentElement?.appendChild(overlay);
   };
 
   // Remove blur effect when needed
