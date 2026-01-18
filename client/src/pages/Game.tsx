@@ -1,4 +1,3 @@
-'use client';
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -72,6 +71,7 @@ export default function Game() {
     locationName: '',
   });
 
+  const [gameOver, setGameOver] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [apiReady, setApiReady] = useState(false);
   const streetViewRef = useRef<google.maps.StreetViewPanorama | null>(null);
@@ -81,13 +81,9 @@ export default function Game() {
   const guessMarkerRef = useRef<google.maps.Marker | null>(null);
   const polylineRef = useRef<google.maps.Polyline | null>(null);
 
-  // Initialize game with random location
+  // Initialize game with first location
   useEffect(() => {
-    // Start with London (known good Street View location)
-    setGameState((prev) => ({
-      ...prev,
-      currentLocation: { lat: 51.5074, lng: -0.1278 },
-    }));
+    selectRandomLocation();
   }, []);
 
   // Initialize Street View when API is ready
@@ -123,6 +119,7 @@ export default function Game() {
         center: { lat: 20, lng: 0 },
         zoom: 2,
         streetViewControl: false,
+        fullscreenControl: false,
       });
       mapRef.current = map;
 
@@ -256,6 +253,9 @@ export default function Game() {
   };
 
   const handleNextRound = () => {
+    // Close map after each round
+    setMapOpen(false);
+
     if (gameState.round < 5) {
       setGameState((prev) => ({
         ...prev,
@@ -274,10 +274,63 @@ export default function Game() {
 
       selectRandomLocation();
     } else {
-      // Game over
-      navigate('/');
+      // Game over - show final score screen
+      setGameOver(true);
     }
   };
+
+  // Final Score Screen
+  if (gameOver) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-black to-blue-900 flex items-center justify-center p-4">
+        <Card className="bg-black/80 border-gray-700 backdrop-blur-sm max-w-md w-full p-8">
+          <div className="text-center space-y-6">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2">Game Over!</h1>
+              <p className="text-gray-300">Challenge Complete</p>
+            </div>
+
+            <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6">
+              <p className="text-sm text-blue-100 mb-2">Final Score</p>
+              <p className="text-5xl font-bold text-white">{gameState.score.toLocaleString()}</p>
+              <p className="text-sm text-blue-100 mt-2">out of {MAX_TOTAL_SCORE.toLocaleString()}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-900/50 rounded-lg p-4">
+                <p className="text-xs text-gray-400 uppercase mb-1">Accuracy</p>
+                <p className="text-2xl font-bold text-green-400">
+                  {Math.round((gameState.score / MAX_TOTAL_SCORE) * 100)}%
+                </p>
+              </div>
+              <div className="bg-gray-900/50 rounded-lg p-4">
+                <p className="text-xs text-gray-400 uppercase mb-1">Avg Distance</p>
+                <p className="text-2xl font-bold text-red-400">
+                  {Math.round(gameState.totalDistance / 5).toLocaleString()} km
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Button
+                onClick={() => navigate('/game')}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Play Again
+              </Button>
+              <Button
+                onClick={() => navigate('/')}
+                variant="outline"
+                className="w-full border-gray-700 text-gray-300 hover:bg-gray-900"
+              >
+                Back to Home
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black flex flex-col relative">
@@ -288,6 +341,11 @@ export default function Game() {
           className="w-full h-full absolute inset-0"
           style={{ height: '100%', width: '100%' }}
         />
+
+        {/* Google Attribution - Bottom Right */}
+        <div className="absolute bottom-4 right-4 z-5 text-xs text-gray-400 pointer-events-none">
+          <p>Powered by Google</p>
+        </div>
 
         {/* Header Controls */}
         <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 to-transparent p-4 z-10">
