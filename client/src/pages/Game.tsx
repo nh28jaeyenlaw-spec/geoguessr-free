@@ -47,6 +47,9 @@ const LOCATIONS = [
   { lat: 25.7617, lng: -80.1918, name: 'Miami, USA' },
 ];
 
+const MAX_POINTS_PER_ROUND = 5000;
+const MAX_TOTAL_SCORE = 25000; // 5 rounds × 5000 points
+
 export default function Game() {
   const [, navigate] = useLocation();
   const [gameState, setGameState] = useState<GameState>({
@@ -109,7 +112,7 @@ export default function Game() {
       panControl: false,
       zoomControl: true,
       addressControl: false,
-      fullscreenControl: true,
+      fullscreenControl: false,
       linksControl: false,
     };
 
@@ -173,7 +176,7 @@ export default function Game() {
   };
 
   const calculatePoints = (distance: number): number => {
-    if (distance < 1) return 5000;
+    if (distance < 1) return MAX_POINTS_PER_ROUND;
     if (distance < 10) return 4500;
     if (distance < 50) return 4000;
     if (distance < 100) return 3500;
@@ -181,7 +184,7 @@ export default function Game() {
     if (distance < 1000) return 2500;
     if (distance < 2500) return 2000;
     if (distance < 5000) return 1500;
-    return Math.max(0, 5000 - Math.floor(distance / 2));
+    return Math.max(0, MAX_POINTS_PER_ROUND - Math.floor(distance / 2));
   };
 
   const handleSubmitGuess = () => {
@@ -316,121 +319,108 @@ export default function Game() {
             </div>
             <div className="text-center">
               <p className="text-sm text-slate-600">Score</p>
-              <p className="text-2xl font-bold text-green-600">{gameState.score.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-green-600">
+                {gameState.score.toLocaleString()} / {MAX_TOTAL_SCORE.toLocaleString()}
+              </p>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Game Area */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Street View Section */}
-          <div className="lg:col-span-2">
-            <Card className="overflow-hidden shadow-lg">
+      <main className="container mx-auto px-4 py-6 h-[calc(100vh-120px)]">
+        <div className="grid grid-cols-2 gap-4 h-full">
+          {/* Left Side - Street View */}
+          <div className="flex flex-col">
+            <Card className="overflow-hidden shadow-lg flex-1">
               <div
                 ref={streetViewContainerRef}
-                className="w-full h-96 bg-slate-900"
+                className="w-full h-full bg-slate-900"
               />
             </Card>
           </div>
 
-          {/* Info Panel */}
-          <div className="space-y-4">
-            <Card className="p-6 bg-white shadow-md">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-blue-700" />
-                Game Info
-              </h3>
+          {/* Right Side - Map and Controls */}
+          <div className="flex flex-col gap-4">
+            {/* Map Section */}
+            <Card className="overflow-hidden shadow-lg flex-1">
+              <MapView
+                onMapReady={handleMapReady}
+                initialCenter={{ lat: 20, lng: 0 }}
+                initialZoom={2}
+                disableStreetView={true}
+                className="h-full"
+              />
+            </Card>
+
+            {/* Controls Section */}
+            <Card className="p-4 bg-white shadow-md">
               <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-slate-600">Status</p>
-                  <p className="text-base font-semibold text-slate-900">
-                    {gameState.isGuessing ? 'Make your guess' : 'Round Complete'}
-                  </p>
-                </div>
-                {gameState.roundComplete && gameState.distance !== null && gameState.points !== null && (
-                  <>
-                    <div className="pt-3 border-t border-slate-200">
-                      <p className="text-sm text-slate-600">Location</p>
-                      <p className="text-base font-semibold text-slate-900">
-                        {gameState.locationName}
-                      </p>
+                {gameState.isGuessing && !gameState.guessLocation && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800 font-medium">
+                      Click on the map to make your guess
+                    </p>
+                  </div>
+                )}
+
+                {gameState.isGuessing && gameState.guessLocation && (
+                  <Button
+                    onClick={handleSubmitGuess}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-colors"
+                  >
+                    Submit Guess
+                  </Button>
+                )}
+
+                {gameState.roundComplete && (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-xs text-slate-600">Location</p>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {gameState.locationName}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-600">Distance</p>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {gameState.distance?.toFixed(0)} km
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-600">Points</p>
+                          <p className="text-sm font-semibold text-green-600">
+                            +{gameState.points?.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Distance</p>
-                      <p className="text-base font-semibold text-slate-900">
-                        {gameState.distance.toFixed(2)} km
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Points Earned</p>
-                      <p className="text-base font-semibold text-green-600">
-                        +{gameState.points.toLocaleString()}
-                      </p>
-                    </div>
-                  </>
+
+                    {gameState.round < 5 && (
+                      <Button
+                        onClick={handleNextRound}
+                        className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg transition-colors"
+                      >
+                        Next Round
+                      </Button>
+                    )}
+
+                    {gameState.round === 5 && (
+                      <Button
+                        onClick={handleResetGame}
+                        className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Play Again
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
             </Card>
-
-            {/* Controls */}
-            <div className="space-y-3">
-              {gameState.isGuessing && gameState.guessLocation && (
-                <Button
-                  onClick={handleSubmitGuess}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-colors"
-                >
-                  Submit Guess
-                </Button>
-              )}
-              {gameState.isGuessing && !gameState.guessLocation && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800 font-medium">
-                    Click on the map below to make your guess
-                  </p>
-                </div>
-              )}
-              {gameState.roundComplete && gameState.round < 5 && (
-                <Button
-                  onClick={handleNextRound}
-                  className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg transition-colors"
-                >
-                  Next Round
-                </Button>
-              )}
-              {gameState.round === 5 && gameState.roundComplete && (
-                <Button
-                  onClick={handleResetGame}
-                  className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Play Again
-                </Button>
-              )}
-            </div>
           </div>
-        </div>
-
-        {/* Map Section */}
-        <div className="mt-8">
-          <Card className="overflow-hidden shadow-lg">
-            <div className="bg-white p-4 border-b border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-blue-700" />
-                Make Your Guess
-              </h3>
-              <p className="text-sm text-slate-600 mt-1">
-                Click on the map to place your guess. The closer you are, the more points you earn!
-              </p>
-            </div>
-            <MapView
-              onMapReady={handleMapReady}
-              initialCenter={{ lat: 20, lng: 0 }}
-              initialZoom={2}
-              disableStreetView={true}
-            />
-          </Card>
         </div>
       </main>
     </div>
