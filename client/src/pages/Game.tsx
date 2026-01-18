@@ -19,7 +19,60 @@ interface GameState {
 }
 
 // Locations with confirmed official Google Street View coverage
-const STREET_VIEW_LOCATIONS = [
+
+  // Apply targeted blur to ground-level street names only
+  const applyStreetViewBlur = () => {
+    const streetViewElement = document.getElementById('street-view');
+    if (!streetViewElement) return;
+    
+    // Create a canvas overlay for targeted blurring
+    let blurOverlay = document.getElementById('street-view-blur-overlay');
+    if (blurOverlay) blurOverlay.remove();
+    
+    const canvas = document.createElement('canvas');
+    canvas.id = 'street-view-blur-overlay';
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.zIndex = '10';
+    
+    const rect = streetViewElement.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Create a semi-transparent blur effect for the bottom portion of the image
+    // where street names typically appear on the ground
+    const blurHeight = Math.floor(rect.height * 0.25); // Bottom 25% of image
+    const blurY = rect.height - blurHeight;
+    
+    // Apply a gradient blur mask from top to bottom
+    const gradient = ctx.createLinearGradient(0, blurY - 50, 0, blurY + blurHeight);
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, blurY - 50, rect.width, blurHeight + 50);
+    
+    // Apply blur filter to the canvas overlay
+    canvas.style.backdropFilter = 'blur(8px)';
+    canvas.style.webkitBackdropFilter = 'blur(8px)';
+    
+    streetViewElement.parentElement?.appendChild(canvas);
+  };
+
+  // Remove blur effect when needed
+  const removeStreetViewBlur = () => {
+    const blurOverlay = document.getElementById('street-view-blur-overlay');
+    if (blurOverlay) {
+      blurOverlay.remove();
+    }
+  };
+
+  const STREET_VIEW_LOCATIONS = [
   { lat: 51.5074, lng: -0.1278, name: 'London' },
   { lat: 48.8566, lng: 2.3522, name: 'Paris' },
   { lat: 35.6762, lng: 139.6503, name: 'Tokyo' },
@@ -127,6 +180,9 @@ export default function Game() {
                   linksControl: false,
                 }
               );
+              
+              // Apply blur to hide street names and identifying text
+              setTimeout(() => applyStreetViewBlur(), 500);
             } else {
               console.warn('No Street View available for this location');
               selectRandomLocation();
