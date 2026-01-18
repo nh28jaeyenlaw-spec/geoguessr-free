@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+'use client';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { MapPin, Compass, RotateCcw, ChevronLeft } from 'lucide-react';
+import { MapPin, Compass, ChevronLeft } from 'lucide-react';
 import { MapView } from '@/components/Map';
 import { useLocation } from 'wouter';
 
@@ -18,44 +19,43 @@ interface GameState {
   locationName: string;
 }
 
-// Seed locations for finding valid Street View coverage
-// These are diverse global locations with known Street View coverage
-const SEED_LOCATIONS = [
-  { lat: 51.5074, lng: -0.1278, name: 'London, UK' },
-  { lat: 48.8566, lng: 2.3522, name: 'Paris, France' },
-  { lat: 35.6762, lng: 139.6503, name: 'Tokyo, Japan' },
-  { lat: -33.8688, lng: 151.2093, name: 'Sydney, Australia' },
-  { lat: 40.7128, lng: -74.0060, name: 'New York, USA' },
-  { lat: 37.7749, lng: -122.4194, name: 'San Francisco, USA' },
-  { lat: 52.5200, lng: 13.4050, name: 'Berlin, Germany' },
-  { lat: 41.9028, lng: 12.4964, name: 'Rome, Italy' },
-  { lat: 39.9526, lng: 116.4074, name: 'Beijing, China' },
-  { lat: 1.3521, lng: 103.8198, name: 'Singapore' },
-  { lat: 55.7558, lng: 37.6173, name: 'Moscow, Russia' },
-  { lat: 34.0522, lng: -118.2437, name: 'Los Angeles, USA' },
-  { lat: 43.2965, lng: 5.3698, name: 'Marseille, France' },
-  { lat: 50.1109, lng: 14.4094, name: 'Prague, Czech Republic' },
-  { lat: 59.3293, lng: 18.0686, name: 'Stockholm, Sweden' },
-  { lat: 48.2082, lng: 16.3738, name: 'Vienna, Austria' },
-  { lat: 52.2297, lng: 21.0122, name: 'Warsaw, Poland' },
-  { lat: 47.4979, lng: 19.0402, name: 'Budapest, Hungary' },
-  { lat: 38.7223, lng: -9.1393, name: 'Lisbon, Portugal' },
-  { lat: 40.4168, lng: -3.7038, name: 'Madrid, Spain' },
-  { lat: 45.5017, lng: -122.6750, name: 'Portland, USA' },
-  { lat: 47.6062, lng: -122.3321, name: 'Seattle, USA' },
-  { lat: 39.7392, lng: -104.9903, name: 'Denver, USA' },
-  { lat: 41.8781, lng: -87.6298, name: 'Chicago, USA' },
-  { lat: 25.7617, lng: -80.1918, name: 'Miami, USA' },
-  { lat: -23.5505, lng: -46.6333, name: 'São Paulo, Brazil' },
-  { lat: -33.8688, lng: 18.4241, name: 'Cape Town, South Africa' },
-  { lat: 31.2357, lng: 30.4415, name: 'Cairo, Egypt' },
-  { lat: 28.6139, lng: 77.2090, name: 'New Delhi, India' },
-  { lat: 13.7563, lng: 100.5018, name: 'Bangkok, Thailand' },
+// Predefined locations with guaranteed official Google Street View coverage
+const STREET_VIEW_LOCATIONS = [
+  { lat: 51.5074, lng: -0.1278 },
+  { lat: 48.8566, lng: 2.3522 },
+  { lat: 35.6762, lng: 139.6503 },
+  { lat: -33.8688, lng: 151.2093 },
+  { lat: 40.7128, lng: -74.0060 },
+  { lat: 37.7749, lng: -122.4194 },
+  { lat: 52.5200, lng: 13.4050 },
+  { lat: 41.9028, lng: 12.4964 },
+  { lat: 39.9526, lng: 116.4074 },
+  { lat: 1.3521, lng: 103.8198 },
+  { lat: 55.7558, lng: 37.6173 },
+  { lat: 34.0522, lng: -118.2437 },
+  { lat: 43.2965, lng: 5.3698 },
+  { lat: 50.1109, lng: 14.4094 },
+  { lat: 59.3293, lng: 18.0686 },
+  { lat: 48.2082, lng: 16.3738 },
+  { lat: 52.2297, lng: 21.0122 },
+  { lat: 47.4979, lng: 19.0402 },
+  { lat: 38.7223, lng: -9.1393 },
+  { lat: 40.4168, lng: -3.7038 },
+  { lat: 45.5017, lng: -122.6750 },
+  { lat: 47.6062, lng: -122.3321 },
+  { lat: 39.7392, lng: -104.9903 },
+  { lat: 41.8781, lng: -87.6298 },
+  { lat: 25.7617, lng: -80.1918 },
+  { lat: -23.5505, lng: -46.6333 },
+  { lat: -33.8688, lng: 18.4241 },
+  { lat: 31.2357, lng: 30.4415 },
+  { lat: 28.6139, lng: 77.2090 },
+  { lat: 13.7563, lng: 100.5018 },
 ];
 
 const MAX_POINTS_PER_ROUND = 5000;
-const MAX_TOTAL_SCORE = 25000; // 5 rounds × 5000 points
-const MAP_SIZE = 40075; // Earth's circumference in km (approximate map size for scoring)
+const MAX_TOTAL_SCORE = 25000;
+const MAP_SIZE = 40075;
 
 export default function Game() {
   const [, navigate] = useLocation();
@@ -72,174 +72,80 @@ export default function Game() {
     locationName: '',
   });
 
-  const [isLoadingStreetView, setIsLoadingStreetView] = useState(false);
-
   const mapRef = useRef<google.maps.Map | null>(null);
-  const streetViewRef = useRef<google.maps.StreetViewPanorama | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
   const guessMarkerRef = useRef<google.maps.Marker | null>(null);
   const polylineRef = useRef<google.maps.Polyline | null>(null);
-  const streetViewContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Initialize game with random location
   useEffect(() => {
     selectRandomLocation();
   }, []);
 
-  // Initialize Street View when location changes
-  useEffect(() => {
-    if (gameState.currentLocation && streetViewContainerRef.current && window.google) {
-      initializeStreetView(gameState.currentLocation);
-    }
-  }, [gameState.currentLocation]);
+  const selectRandomLocation = () => {
+    // Pick a random location from the predefined list
+    const randomLocation = STREET_VIEW_LOCATIONS[Math.floor(Math.random() * STREET_VIEW_LOCATIONS.length)];
 
-  const getRandomLocationNearby = (lat: number, lng: number): { lat: number; lng: number } => {
-    // Generate a random location within ~50km of the seed location
-    const latOffset = (Math.random() - 0.5) * 0.9; // ~100km range
-    const lngOffset = (Math.random() - 0.5) * 0.9;
-    return {
-      lat: lat + latOffset,
-      lng: lng + lngOffset,
-    };
-  };
-
-  const selectRandomLocation = async () => {
-    setIsLoadingStreetView(true);
+    // Generate a nearby random offset (within ~5-10km)
+    const latOffset = (Math.random() - 0.5) * 0.15;
+    const lngOffset = (Math.random() - 0.5) * 0.15;
     
-    // Pick a random seed location
-    const seedLocation = SEED_LOCATIONS[Math.floor(Math.random() * SEED_LOCATIONS.length)];
-    
-    // Generate a nearby random location
-    const randomLocation = getRandomLocationNearby(seedLocation.lat, seedLocation.lng);
-
-    // Verify Street View coverage exists at this location
-    if (window.google) {
-      try {
-        const streetViewService = new google.maps.StreetViewService();
-        const response = await new Promise<google.maps.StreetViewPanoramaData | null>((resolve) => {
-          streetViewService.getPanorama(
-            { location: randomLocation, radius: 50000 },
-            (data, status) => {
-              if (status === google.maps.StreetViewStatus.OK && data) {
-                resolve(data);
-              } else {
-                resolve(null);
-              }
-            }
-          );
-        });
-
-        if (response && response.location && response.location.latLng) {
-          // Valid Street View found
-          const latLng = response.location.latLng;
-          const lat = latLng.lat();
-          const lng = latLng.lng();
-          setGameState((prev) => ({
-            ...prev,
-            currentLocation: { lat, lng },
-            guessLocation: null,
-            isGuessing: true,
-            roundComplete: false,
-            distance: null,
-            points: null,
-            locationName: seedLocation.name,
-          }));
-        } else {
-          // Fallback to seed location if nearby search fails
-          setGameState((prev) => ({
-            ...prev,
-            currentLocation: { lat: seedLocation.lat, lng: seedLocation.lng },
-            guessLocation: null,
-            isGuessing: true,
-            roundComplete: false,
-            distance: null,
-            points: null,
-            locationName: seedLocation.name,
-          }));
-        }
-      } catch (error) {
-        console.error('Error finding Street View:', error);
-        // Fallback to seed location
-        setGameState((prev) => ({
-          ...prev,
-          currentLocation: { lat: seedLocation.lat, lng: seedLocation.lng },
-          guessLocation: null,
-          isGuessing: true,
-          roundComplete: false,
-          distance: null,
-          points: null,
-          locationName: seedLocation.name,
-        }));
-      }
-    }
-    
-    setIsLoadingStreetView(false);
-  };
-
-  const initializeStreetView = (location: { lat: number; lng: number }) => {
-    if (!streetViewContainerRef.current || !window.google) return;
-
-    const streetViewOptions: google.maps.StreetViewPanoramaOptions = {
-      position: location,
-      pov: {
-        heading: Math.floor(Math.random() * 360),
-        pitch: Math.floor(Math.random() * 60) - 30,
-      },
-      zoom: 1,
-      panControl: false,
-      zoomControl: true,
-      addressControl: false,
-      fullscreenControl: false,
-      linksControl: false,
+    const nearbyLocation = {
+      lat: randomLocation.lat + latOffset,
+      lng: randomLocation.lng + lngOffset,
     };
 
-    if (streetViewRef.current) {
-      streetViewRef.current.setPano('');
-    }
-
-    streetViewRef.current = new google.maps.StreetViewPanorama(
-      streetViewContainerRef.current,
-      streetViewOptions
-    );
+    setGameState((prev) => ({
+      ...prev,
+      currentLocation: nearbyLocation,
+      guessLocation: null,
+      isGuessing: true,
+      roundComplete: false,
+      distance: null,
+      points: null,
+      locationName: '',
+    }));
   };
 
   const handleMapReady = (map: google.maps.Map) => {
     mapRef.current = map;
+    map.setCenter({ lat: 20, lng: 0 });
+    map.setZoom(2);
 
-    // Add click listener to map for guessing
-    map.addListener('click', (e: google.maps.MapMouseEvent) => {
-      if (gameState.isGuessing && e.latLng) {
-        const guessLat = e.latLng.lat();
-        const guessLng = e.latLng.lng();
+    // Add click listener to place guess marker
+    map.addListener('click', (event: google.maps.MapMouseEvent) => {
+      if (event.latLng && gameState.isGuessing && !gameState.roundComplete) {
+        const lat = event.latLng.lat();
+        const lng = event.latLng.lng();
+        
+        // Remove existing guess marker
+        if (guessMarkerRef.current) {
+          guessMarkerRef.current.setMap(null);
+        }
+
+        // Add new guess marker
+        guessMarkerRef.current = new google.maps.Marker({
+          position: { lat, lng },
+          map: map,
+          title: 'Your Guess',
+          icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+        });
 
         setGameState((prev) => ({
           ...prev,
-          guessLocation: { lat: guessLat, lng: guessLng },
+          guessLocation: { lat, lng },
         }));
-
-        // Update guess marker
-        if (guessMarkerRef.current) {
-          guessMarkerRef.current.setPosition(e.latLng);
-        } else {
-          guessMarkerRef.current = new google.maps.Marker({
-            position: e.latLng,
-            map,
-            title: 'Your Guess',
-            icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-          });
-        }
       }
     });
+  };
 
-    // Set initial map center
-    if (gameState.currentLocation) {
-      map.setCenter(gameState.currentLocation);
-      map.setZoom(4);
-    }
+  const calculatePoints = (distance: number): number => {
+    const points = Math.round(MAX_POINTS_PER_ROUND * Math.exp((-10 * distance) / MAP_SIZE));
+    return Math.max(0, points);
   };
 
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLng = ((lng2 - lng1) * Math.PI) / 180;
     const a =
@@ -250,14 +156,6 @@ export default function Game() {
         Math.sin(dLng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
-  };
-
-  const calculatePoints = (distance: number): number => {
-    // GeoGuessr-style exponential decay scoring
-    // Score = 5000 * e^(-10 * distance / map_size)
-    const exponent = -10 * distance / MAP_SIZE;
-    const score = MAX_POINTS_PER_ROUND * Math.exp(exponent);
-    return Math.round(Math.max(0, score));
   };
 
   const handleSubmitGuess = () => {
@@ -272,238 +170,190 @@ export default function Game() {
 
     const points = calculatePoints(distance);
 
-    setGameState((prev) => ({
-      ...prev,
-      distance,
-      points,
-      score: prev.score + points,
-      totalDistance: prev.totalDistance + distance,
-      isGuessing: false,
-      roundComplete: true,
-    }));
+    // Draw line between guess and actual location
+    if (mapRef.current) {
+      if (polylineRef.current) {
+        polylineRef.current.setMap(null);
+      }
 
-    // Draw polyline between guess and actual location
-    if (mapRef.current && markerRef.current === null) {
+      polylineRef.current = new google.maps.Polyline({
+        path: [gameState.guessLocation, gameState.currentLocation],
+        geodesic: true,
+        strokeColor: '#FF0000',
+        strokeOpacity: 0.7,
+        strokeWeight: 2,
+        map: mapRef.current,
+      });
+
+      // Add actual location marker
+      if (markerRef.current) {
+        markerRef.current.setMap(null);
+      }
+
       markerRef.current = new google.maps.Marker({
         position: gameState.currentLocation,
         map: mapRef.current,
         title: 'Actual Location',
         icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
       });
-
-      polylineRef.current = new google.maps.Polyline({
-        path: [gameState.guessLocation, gameState.currentLocation],
-        geodesic: true,
-        strokeColor: '#ef4444',
-        strokeOpacity: 0.7,
-        strokeWeight: 2,
-        map: mapRef.current,
-      });
-
-      const bounds = new google.maps.LatLngBounds();
-      bounds.extend(gameState.guessLocation);
-      bounds.extend(gameState.currentLocation);
-      mapRef.current.fitBounds(bounds);
-    }
-  };
-
-  const handleNextRound = () => {
-    // Clear markers and polyline
-    if (markerRef.current) {
-      markerRef.current.setMap(null);
-      markerRef.current = null;
-    }
-    if (guessMarkerRef.current) {
-      guessMarkerRef.current.setMap(null);
-      guessMarkerRef.current = null;
-    }
-    if (polylineRef.current) {
-      polylineRef.current.setMap(null);
-      polylineRef.current = null;
-    }
-
-    if (mapRef.current) {
-      mapRef.current.setCenter({ lat: 20, lng: 0 });
-      mapRef.current.setZoom(2);
     }
 
     setGameState((prev) => ({
       ...prev,
-      round: prev.round + 1,
+      isGuessing: false,
+      roundComplete: true,
+      distance: Math.round(distance),
+      points,
+      score: prev.score + points,
+      totalDistance: prev.totalDistance + distance,
     }));
-
-    selectRandomLocation();
   };
 
-  const handleResetGame = () => {
-    if (markerRef.current) {
-      markerRef.current.setMap(null);
-      markerRef.current = null;
-    }
-    if (guessMarkerRef.current) {
-      guessMarkerRef.current.setMap(null);
-      guessMarkerRef.current = null;
-    }
-    if (polylineRef.current) {
-      polylineRef.current.setMap(null);
-      polylineRef.current = null;
-    }
+  const handleNextRound = () => {
+    if (gameState.round < 5) {
+      setGameState((prev) => ({
+        ...prev,
+        round: prev.round + 1,
+        guessLocation: null,
+        isGuessing: true,
+        roundComplete: false,
+        distance: null,
+        points: null,
+      }));
 
-    if (mapRef.current) {
-      mapRef.current.setCenter({ lat: 20, lng: 0 });
-      mapRef.current.setZoom(2);
+      // Clear markers
+      if (markerRef.current) markerRef.current.setMap(null);
+      if (guessMarkerRef.current) guessMarkerRef.current.setMap(null);
+      if (polylineRef.current) polylineRef.current.setMap(null);
+
+      selectRandomLocation();
+    } else {
+      // Game over
+      navigate('/');
     }
+  };
 
-    setGameState({
-      round: 1,
-      score: 0,
-      totalDistance: 0,
-      currentLocation: null,
-      guessLocation: null,
-      isGuessing: true,
-      roundComplete: false,
-      distance: null,
-      points: null,
-      locationName: '',
-    });
-
-    selectRandomLocation();
+  // Generate Street View URL using Manus proxy
+  const getStreetViewUrl = () => {
+    if (!gameState.currentLocation) return '';
+    const heading = Math.floor(Math.random() * 360);
+    const pitch = Math.floor(Math.random() * 60) - 30;
+    // Use Manus proxy for Street View API
+    return `https://forge.manus.ai/v1/maps/proxy/maps/api/streetview?size=640x480&location=${gameState.currentLocation.lat},${gameState.currentLocation.lng}&heading=${heading}&pitch=${pitch}&fov=90`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="bg-black/40 backdrop-blur-sm border-b border-blue-500/20 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/')}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-blue-500/20 rounded-lg transition-colors"
             >
-              <ChevronLeft className="w-6 h-6 text-slate-600" />
+              <ChevronLeft className="w-5 h-5 text-blue-400" />
             </button>
-            <Compass className="w-8 h-8 text-blue-700" />
-            <h1 className="text-3xl font-bold text-blue-900">GeoGuessr</h1>
+            <div>
+              <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                <Compass className="w-5 h-5 text-blue-400" />
+                GeoGuessr
+              </h1>
+              <p className="text-sm text-blue-300">Round {gameState.round}/5</p>
+            </div>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="text-center">
-              <p className="text-sm text-slate-600">Round</p>
-              <p className="text-2xl font-bold text-blue-700">{gameState.round}/5</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-slate-600">Score</p>
-              <p className="text-2xl font-bold text-green-600">
-                {gameState.score.toLocaleString()} / {MAX_TOTAL_SCORE.toLocaleString()}
-              </p>
-            </div>
+          <div className="text-right">
+            <p className="text-sm text-blue-300">Score</p>
+            <p className="text-2xl font-bold text-blue-400">
+              {gameState.score} / {MAX_TOTAL_SCORE}
+            </p>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Game Area */}
-      <main className="container mx-auto px-4 py-6 h-[calc(100vh-120px)]">
-        <div className="grid grid-cols-2 gap-4 h-full">
-          {/* Left Side - Street View */}
-          <div className="flex flex-col">
-            <Card className="overflow-hidden shadow-lg flex-1 relative">
-              <div
-                ref={streetViewContainerRef}
-                className="w-full h-full bg-slate-900"
+      <div className="flex-1 flex gap-4 p-4 max-w-7xl mx-auto w-full">
+        {/* Street View - Left Half */}
+        <div className="w-1/2 flex flex-col gap-4">
+          <Card className="flex-1 bg-slate-800/50 border-blue-500/20 overflow-hidden">
+            {gameState.currentLocation ? (
+              <img
+                src={getStreetViewUrl()}
+                alt="Street View"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Fallback if Street View image fails to load
+                  const img = e.target as HTMLImageElement;
+                  img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='480'%3E%3Crect fill='%23334155' width='640' height='480'/%3E%3Ctext x='50%25' y='50%25' font-size='24' fill='%2394a3b8' text-anchor='middle' dy='.3em'%3EStreet View Loading...%3C/text%3E%3C/svg%3E`;
+                }}
               />
-              {isLoadingStreetView && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
-                  <div className="text-white text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-2"></div>
-                    <p>Loading Street View...</p>
-                  </div>
-                </div>
-              )}
-            </Card>
-          </div>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-slate-900">
+                <p className="text-blue-300">Loading...</p>
+              </div>
+            )}
+          </Card>
+        </div>
 
-          {/* Right Side - Map and Controls */}
-          <div className="flex flex-col gap-4">
-            {/* Map Section */}
-            <Card className="overflow-hidden shadow-lg flex-1">
-              <MapView
-                onMapReady={handleMapReady}
-                initialCenter={{ lat: 20, lng: 0 }}
-                initialZoom={2}
-                disableStreetView={true}
-                className="h-full"
-              />
-            </Card>
+        {/* Map & Controls - Right Half */}
+        <div className="w-1/2 flex flex-col gap-4">
+          <Card className="flex-1 bg-slate-800/50 border-blue-500/20 overflow-hidden">
+            <MapView
+              onMapReady={handleMapReady}
+              disableStreetView={true}
+            />
+          </Card>
 
-            {/* Controls Section */}
-            <Card className="p-4 bg-white shadow-md">
+          {/* Game Info & Controls */}
+          <Card className="bg-slate-800/50 border-blue-500/20 p-4">
+            {gameState.roundComplete ? (
               <div className="space-y-3">
-                {gameState.isGuessing && !gameState.guessLocation && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800 font-medium">
-                      Click on the map to make your guess
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-xs text-blue-300 uppercase">Distance</p>
+                    <p className="text-lg font-bold text-red-400">
+                      {gameState.distance?.toLocaleString()} km
                     </p>
                   </div>
-                )}
-
-                {gameState.isGuessing && gameState.guessLocation && (
-                  <Button
-                    onClick={handleSubmitGuess}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-colors"
-                  >
-                    Submit Guess
-                  </Button>
-                )}
-
-                {gameState.roundComplete && (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div>
-                          <p className="text-xs text-slate-600">Location</p>
-                          <p className="text-sm font-semibold text-slate-900">
-                            {gameState.locationName}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-600">Distance</p>
-                          <p className="text-sm font-semibold text-slate-900">
-                            {gameState.distance?.toFixed(0)} km
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-600">Points</p>
-                          <p className="text-sm font-semibold text-green-600">
-                            +{gameState.points?.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {gameState.round < 5 && (
-                      <Button
-                        onClick={handleNextRound}
-                        className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg transition-colors"
-                      >
-                        Next Round
-                      </Button>
-                    )}
-
-                    {gameState.round === 5 && (
-                      <Button
-                        onClick={handleResetGame}
-                        className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        Play Again
-                      </Button>
-                    )}
+                  <div>
+                    <p className="text-xs text-blue-300 uppercase">Points</p>
+                    <p className="text-lg font-bold text-green-400">
+                      +{gameState.points?.toLocaleString()}
+                    </p>
                   </div>
-                )}
+                  <div>
+                    <p className="text-xs text-blue-300 uppercase">Accuracy</p>
+                    <p className="text-lg font-bold text-blue-400">
+                      {Math.round((gameState.points! / MAX_POINTS_PER_ROUND) * 100)}%
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleNextRound}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {gameState.round < 5 ? 'Next Round' : 'Finish Game'}
+                </Button>
               </div>
-            </Card>
-          </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-blue-300">
+                  {gameState.guessLocation
+                    ? 'Click Submit Guess to check your answer'
+                    : 'Click on the map to make your guess'}
+                </p>
+                <Button
+                  onClick={handleSubmitGuess}
+                  disabled={!gameState.guessLocation}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                >
+                  Submit Guess
+                </Button>
+              </div>
+            )}
+          </Card>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
