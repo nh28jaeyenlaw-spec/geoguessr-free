@@ -108,6 +108,10 @@ export default function Game() {
             linksControl: false,
           }
         );
+
+        // Validation happens through the StreetViewService API
+        // which checks copyright field during getPanorama() calls
+        // Official Google Street View has proper copyright attribution
       }
     }
   }, [apiReady, gameState.currentLocation]);
