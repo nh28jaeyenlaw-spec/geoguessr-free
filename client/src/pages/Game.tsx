@@ -59,7 +59,7 @@ interface GameState {
     
     // Apply blur filter to the canvas overlay
     canvas.style.backdropFilter = 'blur(8px)';
-    canvas.style.webkitBackdropFilter = 'blur(8px)';
+    // webkit backdrop filter for better browser support
     
     streetViewElement.parentElement?.appendChild(canvas);
   };
