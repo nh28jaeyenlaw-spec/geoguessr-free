@@ -21,37 +21,7 @@ interface GameState {
 // Locations with confirmed official Google Street View coverage
 
   // Apply targeted blur to ground-level street names only
-  const applyStreetViewBlur = () => {
-    const streetViewElement = document.getElementById('street-view');
-    if (!streetViewElement) return;
-    
-    // Remove existing blur overlay
-    let blurOverlay = document.getElementById('street-view-blur-overlay');
-    if (blurOverlay) blurOverlay.remove();
-    
-    // Create fixed overlay for ground-level blur
-    const overlay = document.createElement('div');
-    overlay.id = 'street-view-blur-overlay';
-    overlay.style.position = 'fixed';
-    overlay.style.bottom = '0';
-    overlay.style.left = '0';
-    overlay.style.width = '100%';
-    overlay.style.height = '25vh';
-    overlay.style.pointerEvents = 'none';
-    overlay.style.zIndex = '10';
-    overlay.style.backdropFilter = 'blur(8px)';
-    overlay.style.background = 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.08) 100%)';
-    
-    document.body.appendChild(overlay);
-  };
 
-  // Remove blur effect when needed
-  const removeStreetViewBlur = () => {
-    const blurOverlay = document.getElementById('street-view-blur-overlay');
-    if (blurOverlay) {
-      blurOverlay.remove();
-    }
-  };
 
   const STREET_VIEW_LOCATIONS = [
   { lat: 51.5074, lng: -0.1278, name: 'London' },
@@ -161,9 +131,7 @@ export default function Game() {
                   linksControl: false,
                 }
               );
-              
-              // Apply blur to hide street names and identifying text
-              setTimeout(() => applyStreetViewBlur(), 500);
+
             } else {
               console.warn('No Street View available for this location');
               selectRandomLocation();
