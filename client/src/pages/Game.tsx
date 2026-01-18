@@ -19,38 +19,38 @@ interface GameState {
   locationName: string;
 }
 
-// Predefined locations with guaranteed official Google Street View coverage
+// Locations with confirmed official Google Street View coverage
 const STREET_VIEW_LOCATIONS = [
-  { lat: 51.5074, lng: -0.1278 },
-  { lat: 48.8566, lng: 2.3522 },
-  { lat: 35.6762, lng: 139.6503 },
-  { lat: -33.8688, lng: 151.2093 },
-  { lat: 40.7128, lng: -74.0060 },
-  { lat: 37.7749, lng: -122.4194 },
-  { lat: 52.5200, lng: 13.4050 },
-  { lat: 41.9028, lng: 12.4964 },
-  { lat: 39.9526, lng: 116.4074 },
-  { lat: 1.3521, lng: 103.8198 },
-  { lat: 55.7558, lng: 37.6173 },
-  { lat: 34.0522, lng: -118.2437 },
-  { lat: 43.2965, lng: 5.3698 },
-  { lat: 50.1109, lng: 14.4094 },
-  { lat: 59.3293, lng: 18.0686 },
-  { lat: 48.2082, lng: 16.3738 },
-  { lat: 52.2297, lng: 21.0122 },
-  { lat: 47.4979, lng: 19.0402 },
-  { lat: 38.7223, lng: -9.1393 },
-  { lat: 40.4168, lng: -3.7038 },
-  { lat: 45.5017, lng: -122.6750 },
-  { lat: 47.6062, lng: -122.3321 },
-  { lat: 39.7392, lng: -104.9903 },
-  { lat: 41.8781, lng: -87.6298 },
-  { lat: 25.7617, lng: -80.1918 },
-  { lat: -23.5505, lng: -46.6333 },
-  { lat: -33.8688, lng: 18.4241 },
-  { lat: 31.2357, lng: 30.4415 },
-  { lat: 28.6139, lng: 77.2090 },
-  { lat: 13.7563, lng: 100.5018 },
+  { lat: 51.5074, lng: -0.1278, name: 'London' },
+  { lat: 48.8566, lng: 2.3522, name: 'Paris' },
+  { lat: 35.6762, lng: 139.6503, name: 'Tokyo' },
+  { lat: -33.8688, lng: 151.2093, name: 'Sydney' },
+  { lat: 40.7128, lng: -74.0060, name: 'New York' },
+  { lat: 37.7749, lng: -122.4194, name: 'San Francisco' },
+  { lat: 52.5200, lng: 13.4050, name: 'Berlin' },
+  { lat: 41.9028, lng: 12.4964, name: 'Rome' },
+  { lat: 39.9526, lng: 116.4074, name: 'Beijing' },
+  { lat: 1.3521, lng: 103.8198, name: 'Singapore' },
+  { lat: 55.7558, lng: 37.6173, name: 'Moscow' },
+  { lat: 34.0522, lng: -118.2437, name: 'Los Angeles' },
+  { lat: 43.2965, lng: 5.3698, name: 'Marseille' },
+  { lat: 50.1109, lng: 14.4094, name: 'Prague' },
+  { lat: 59.3293, lng: 18.0686, name: 'Stockholm' },
+  { lat: 48.2082, lng: 16.3738, name: 'Vienna' },
+  { lat: 52.2297, lng: 21.0122, name: 'Warsaw' },
+  { lat: 47.4979, lng: 19.0402, name: 'Budapest' },
+  { lat: 38.7223, lng: -9.1393, name: 'Lisbon' },
+  { lat: 40.4168, lng: -3.7038, name: 'Madrid' },
+  { lat: 45.5017, lng: -122.6750, name: 'Portland' },
+  { lat: 47.6062, lng: -122.3321, name: 'Seattle' },
+  { lat: 39.7392, lng: -104.9903, name: 'Denver' },
+  { lat: 41.8781, lng: -87.6298, name: 'Chicago' },
+  { lat: 25.7617, lng: -80.1918, name: 'Miami' },
+  { lat: -23.5505, lng: -46.6333, name: 'São Paulo' },
+  { lat: -33.8688, lng: 18.4241, name: 'Cape Town' },
+  { lat: 31.2357, lng: 30.4415, name: 'Cairo' },
+  { lat: 28.6139, lng: 77.2090, name: 'Delhi' },
+  { lat: 13.7563, lng: 100.5018, name: 'Bangkok' },
 ];
 
 const MAX_POINTS_PER_ROUND = 5000;
@@ -73,6 +73,8 @@ export default function Game() {
   });
 
   const [mapOpen, setMapOpen] = useState(false);
+  const [apiReady, setApiReady] = useState(false);
+  const streetViewRef = useRef<google.maps.StreetViewPanorama | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
@@ -81,15 +83,38 @@ export default function Game() {
 
   // Initialize game with random location
   useEffect(() => {
-    selectRandomLocation();
+    // Start with London (known good Street View location)
+    setGameState((prev) => ({
+      ...prev,
+      currentLocation: { lat: 51.5074, lng: -0.1278 },
+    }));
   }, []);
 
-  const [apiReady, setApiReady] = useState(false);
-
-  // Initialize map in collapsible panel
-  const handleMapReady = (map: google.maps.Map) => {
-    setApiReady(true);
-  };
+  // Initialize Street View when API is ready
+  useEffect(() => {
+    if (apiReady && gameState.currentLocation && !streetViewRef.current) {
+      const streetViewContainer = document.getElementById('street-view');
+      if (streetViewContainer && window.google) {
+        streetViewRef.current = new window.google.maps.StreetViewPanorama(
+          streetViewContainer,
+          {
+            position: gameState.currentLocation,
+            pov: {
+              heading: Math.random() * 360,
+              pitch: Math.random() * 60 - 30,
+            },
+            zoom: 1,
+            addressControl: false,
+            fullscreenControl: false,
+            panControl: false,
+            zoomControl: false,
+            motionTrackingControl: false,
+            linksControl: false,
+          }
+        );
+      }
+    }
+  }, [apiReady, gameState.currentLocation]);
 
   // Initialize map in collapsible panel when API is ready
   useEffect(() => {
@@ -130,17 +155,19 @@ export default function Game() {
   }, [mapOpen, apiReady]);
 
   const selectRandomLocation = () => {
-    // Pick a random location from the predefined list
     const randomLocation = STREET_VIEW_LOCATIONS[Math.floor(Math.random() * STREET_VIEW_LOCATIONS.length)];
-
-    // Generate a nearby random offset (within ~5-10km)
-    const latOffset = (Math.random() - 0.5) * 0.15;
-    const lngOffset = (Math.random() - 0.5) * 0.15;
+    
+    // Add slight random offset (within ~2km)
+    const latOffset = (Math.random() - 0.5) * 0.02;
+    const lngOffset = (Math.random() - 0.5) * 0.02;
     
     const nearbyLocation = {
       lat: randomLocation.lat + latOffset,
       lng: randomLocation.lng + lngOffset,
     };
+
+    // Reset Street View reference when changing location
+    streetViewRef.current = null;
 
     setGameState((prev) => ({
       ...prev,
@@ -150,11 +177,13 @@ export default function Game() {
       roundComplete: false,
       distance: null,
       points: null,
-      locationName: '',
+      locationName: randomLocation.name,
     }));
   };
 
-
+  const handleMapReady = (map: google.maps.Map) => {
+    setApiReady(true);
+  };
 
   const calculatePoints = (distance: number): number => {
     const points = Math.round(MAX_POINTS_PER_ROUND * Math.exp((-10 * distance) / MAP_SIZE));
@@ -193,7 +222,7 @@ export default function Game() {
         polylineRef.current.setMap(null);
       }
 
-      polylineRef.current = new google.maps.Polyline({
+      polylineRef.current = new window.google.maps.Polyline({
         path: [gameState.guessLocation, gameState.currentLocation],
         geodesic: true,
         strokeColor: '#FF0000',
@@ -207,7 +236,7 @@ export default function Game() {
         markerRef.current.setMap(null);
       }
 
-      markerRef.current = new google.maps.Marker({
+      markerRef.current = new window.google.maps.Marker({
         position: gameState.currentLocation,
         map: mapRef.current,
         title: 'Actual Location',
@@ -250,34 +279,15 @@ export default function Game() {
     }
   };
 
-  // Generate Street View URL using Manus proxy
-  const getStreetViewUrl = () => {
-    if (!gameState.currentLocation) return '';
-    const heading = Math.floor(Math.random() * 360);
-    const pitch = Math.floor(Math.random() * 60) - 30;
-    // Use Manus proxy for Street View API
-    return `https://forge.manus.ai/v1/maps/proxy/maps/api/streetview?size=1280x720&location=${gameState.currentLocation.lat},${gameState.currentLocation.lng}&heading=${heading}&pitch=${pitch}&fov=90`;
-  };
-
   return (
     <div className="min-h-screen bg-black flex flex-col relative">
       {/* Full Screen Street View */}
-      <div className="flex-1 relative overflow-hidden z-0">
-        {gameState.currentLocation ? (
-          <img
-            src={getStreetViewUrl()}
-            alt="Street View"
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1280' height='720'%3E%3Crect fill='%23000000' width='1280' height='720'/%3E%3Ctext x='50%25' y='50%25' font-size='32' fill='%23666666' text-anchor='middle' dy='.3em'%3EStreet View Loading...%3C/text%3E%3C/svg%3E`;
-            }}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-black">
-            <p className="text-gray-400 text-xl">Loading...</p>
-          </div>
-        )}
+      <div className="flex-1 relative overflow-hidden z-0" style={{ height: '100vh' }}>
+        <div
+          id="street-view"
+          className="w-full h-full absolute inset-0"
+          style={{ height: '100%', width: '100%' }}
+        />
 
         {/* Header Controls */}
         <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 to-transparent p-4 z-10">
