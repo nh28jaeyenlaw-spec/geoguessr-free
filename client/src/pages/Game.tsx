@@ -371,9 +371,9 @@ export default function Game() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex flex-col relative">
+    <div className="min-h-screen bg-black flex flex-col relative" style={{ height: '100vh' }}>
       {/* Full Screen Street View */}
-      <div className="flex-1 relative overflow-hidden z-0" style={{ height: '100vh' }}>
+      <div className="flex-1 relative overflow-hidden z-0" style={{ height: '100%' }}>
         <div
           id="street-view"
           className="w-full h-full absolute inset-0"
@@ -412,20 +412,20 @@ export default function Game() {
           </div>
         </div>
 
-        {/* Bottom Center - Guess Controls */}
+        {/* Mobile Guess Controls - Bottom Safe Area */}
         {!gameState.roundComplete && (
-          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md px-4 pb-4 z-20">
-            <Card className="bg-black/80 border-gray-700 p-4 backdrop-blur-sm">
-              <p className="text-sm text-gray-300 mb-3">
+          <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 to-black/80 p-4 z-20 safe-area-inset-bottom">
+            <div className="max-w-2xl mx-auto">
+              <p className="text-sm text-gray-300 mb-3 text-center">
                 {gameState.guessLocation
                   ? '✓ Guess placed. Ready to submit?'
                   : 'Open the map to make your guess'}
               </p>
-              <div className="space-y-2">
+              <div className="flex gap-2">
                 <Button
                   onClick={handleSubmitGuess}
                   disabled={!gameState.guessLocation}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 font-bold py-3"
                 >
                   Submit Guess
                 </Button>
@@ -440,63 +440,65 @@ export default function Game() {
                     }));
                   }}
                   variant="outline"
-                  className="w-full border-gray-600 text-gray-300 hover:bg-gray-900"
+                  className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-900 font-bold py-3"
                 >
-                  Quick Guess (Test)
+                  Quick Guess
                 </Button>
               </div>
-            </Card>
+            </div>
           </div>
         )}
 
-        {/* Bottom Right - Results Panel (when round complete) */}
+        {/* Results Panel - Bottom Safe Area */}
         {gameState.roundComplete && (
-          <div className="absolute bottom-4 right-4 z-20">
-            <Card className="bg-black/90 border-gray-700 p-4 backdrop-blur-sm w-80">
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase">Distance</p>
-                    <p className="text-lg font-bold text-red-400">
-                      {gameState.distance?.toLocaleString()} km
-                    </p>
+          <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 to-black/80 p-4 z-20 safe-area-inset-bottom">
+            <div className="max-w-2xl mx-auto">
+              <Card className="bg-black/80 border-gray-700 p-4 backdrop-blur-sm">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase">Distance</p>
+                      <p className="text-lg font-bold text-red-400">
+                        {gameState.distance?.toLocaleString()} km
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase">Points</p>
+                      <p className="text-lg font-bold text-green-400">
+                        +{gameState.points?.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase">Accuracy</p>
+                      <p className="text-lg font-bold text-blue-400">
+                        {Math.round((gameState.points! / MAX_POINTS_PER_ROUND) * 100)}%
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase">Points</p>
-                    <p className="text-lg font-bold text-green-400">
-                      +{gameState.points?.toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase">Accuracy</p>
-                    <p className="text-lg font-bold text-blue-400">
-                      {Math.round((gameState.points! / MAX_POINTS_PER_ROUND) * 100)}%
-                    </p>
-                  </div>
+                  <Button
+                    onClick={handleNextRound}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3"
+                  >
+                    {gameState.round < 5 ? 'Next Round' : 'Finish Game'}
+                  </Button>
                 </div>
-                <Button
-                  onClick={handleNextRound}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  {gameState.round < 5 ? 'Next Round' : 'Finish Game'}
-                </Button>
-              </div>
-            </Card>
+              </Card>
+            </div>
           </div>
         )}
 
-        {/* Bottom Right - Map Toggle Button */}
+        {/* Map Toggle Button - Top Right */}
         <button
           onClick={() => setMapOpen(!mapOpen)}
-          className="absolute bottom-4 right-4 z-50 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-lg"
+          className="fixed top-20 right-4 z-50 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-lg md:absolute md:top-auto md:bottom-4"
           title={mapOpen ? 'Close map' : 'Open map'}
         >
           {mapOpen ? <X className="w-5 h-5" /> : <MapIcon className="w-5 h-5" />}
         </button>
 
-        {/* Collapsible Map Panel */}
+        {/* Collapsible Map Panel - Responsive */}
         {mapOpen && (
-          <div className="absolute bottom-20 right-4 z-40 w-96 h-96 rounded-lg overflow-hidden shadow-2xl border border-gray-700">
+          <div className="fixed bottom-0 left-0 right-0 top-0 z-40 md:absolute md:bottom-20 md:right-4 md:w-96 md:h-96 md:rounded-lg overflow-hidden shadow-2xl border border-gray-700">
             <div
               ref={mapContainerRef}
               className="w-full h-full"
@@ -510,6 +512,15 @@ export default function Game() {
       <div className="hidden">
         <MapView onMapReady={handleMapReady} disableStreetView={true}/>
       </div>
+
+      {/* Safe area padding for mobile */}
+      <style>{`
+        @supports (padding: max(0px)) {
+          .safe-area-inset-bottom {
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
+          }
+        }
+      `}</style>
     </div>
   );
 }
