@@ -33,12 +33,20 @@ export default function Home() {
             <p className="text-xl md:text-2xl text-slate-700 mb-8">
               Test your geography knowledge by guessing locations from Street View images
             </p>
-            <Button
-              onClick={() => navigate('/game')}
-              className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition-all hover:shadow-lg"
-            >
-              Start Playing
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                onClick={() => navigate('/game')}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition-all hover:shadow-lg"
+              >
+                Start Playing
+              </Button>
+              <Button
+                onClick={() => navigate('/lobby')}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition-all hover:shadow-lg"
+              >
+                Play with Friends
+              </Button>
+            </div>
           </div>
         </div>
       </section>
