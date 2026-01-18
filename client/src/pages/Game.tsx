@@ -288,6 +288,9 @@ export default function Game() {
       score: prev.score + points,
       totalDistance: prev.totalDistance + distance,
     }));
+
+    // Auto-open map to show results
+    setMapOpen(true);
   };
 
   const handleNextRound = () => {
@@ -496,9 +499,9 @@ export default function Game() {
           {mapOpen ? <X className="w-5 h-5" /> : <MapIcon className="w-5 h-5" />}
         </button>
 
-        {/* Collapsible Map Panel - Responsive */}
+        {/* Collapsible Map Panel - Fixed Size */}
         {mapOpen && (
-          <div className="fixed bottom-0 left-0 right-0 top-0 z-40 md:absolute md:bottom-20 md:right-4 md:w-96 md:h-96 md:rounded-lg overflow-hidden shadow-2xl border border-gray-700">
+          <div className="fixed bottom-20 right-4 z-40 w-96 h-96 rounded-lg overflow-hidden shadow-2xl border border-gray-700">
             <div
               ref={mapContainerRef}
               className="w-full h-full"
