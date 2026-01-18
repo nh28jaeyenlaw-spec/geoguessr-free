@@ -74,6 +74,13 @@ export default function Game() {
     selectRandomLocation();
   }, []);
 
+  // Initialize Street View when location changes
+  useEffect(() => {
+    if (gameState.currentLocation && streetViewContainerRef.current && window.google) {
+      initializeStreetView(gameState.currentLocation);
+    }
+  }, [gameState.currentLocation]);
+
   const selectRandomLocation = () => {
     const location = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
 
@@ -87,15 +94,10 @@ export default function Game() {
       points: null,
       locationName: location.name,
     }));
-
-    // Initialize Street View if container is ready
-    if (streetViewContainerRef.current && window.google) {
-      initializeStreetView(location);
-    }
   };
 
-  const initializeStreetView = (location: { lat: number; lng: number; name: string }) => {
-    if (!streetViewContainerRef.current) return;
+  const initializeStreetView = (location: { lat: number; lng: number }) => {
+    if (!streetViewContainerRef.current || !window.google) return;
 
     const streetViewOptions: google.maps.StreetViewPanoramaOptions = {
       position: location,
@@ -108,7 +110,12 @@ export default function Game() {
       zoomControl: true,
       addressControl: false,
       fullscreenControl: true,
+      linksControl: false,
     };
+
+    if (streetViewRef.current) {
+      streetViewRef.current.setPano('');
+    }
 
     streetViewRef.current = new google.maps.StreetViewPanorama(
       streetViewContainerRef.current,
@@ -239,6 +246,11 @@ export default function Game() {
       polylineRef.current = null;
     }
 
+    if (mapRef.current) {
+      mapRef.current.setCenter({ lat: 20, lng: 0 });
+      mapRef.current.setZoom(2);
+    }
+
     setGameState((prev) => ({
       ...prev,
       round: prev.round + 1,
@@ -248,19 +260,6 @@ export default function Game() {
   };
 
   const handleResetGame = () => {
-    setGameState({
-      round: 1,
-      score: 0,
-      totalDistance: 0,
-      currentLocation: null,
-      guessLocation: null,
-      isGuessing: true,
-      roundComplete: false,
-      distance: null,
-      points: null,
-      locationName: '',
-    });
-
     if (markerRef.current) {
       markerRef.current.setMap(null);
       markerRef.current = null;
@@ -273,6 +272,24 @@ export default function Game() {
       polylineRef.current.setMap(null);
       polylineRef.current = null;
     }
+
+    if (mapRef.current) {
+      mapRef.current.setCenter({ lat: 20, lng: 0 });
+      mapRef.current.setZoom(2);
+    }
+
+    setGameState({
+      round: 1,
+      score: 0,
+      totalDistance: 0,
+      currentLocation: null,
+      guessLocation: null,
+      isGuessing: true,
+      roundComplete: false,
+      distance: null,
+      points: null,
+      locationName: '',
+    });
 
     selectRandomLocation();
   };
@@ -411,6 +428,7 @@ export default function Game() {
               onMapReady={handleMapReady}
               initialCenter={{ lat: 20, lng: 0 }}
               initialZoom={2}
+              disableStreetView={true}
             />
           </Card>
         </div>
