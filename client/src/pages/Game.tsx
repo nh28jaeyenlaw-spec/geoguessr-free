@@ -18,8 +18,9 @@ interface GameState {
   locationName: string;
 }
 
-// Random locations around the world for Street View
-const LOCATIONS = [
+// Seed locations for finding valid Street View coverage
+// These are diverse global locations with known Street View coverage
+const SEED_LOCATIONS = [
   { lat: 51.5074, lng: -0.1278, name: 'London, UK' },
   { lat: 48.8566, lng: 2.3522, name: 'Paris, France' },
   { lat: 35.6762, lng: 139.6503, name: 'Tokyo, Japan' },
@@ -45,6 +46,11 @@ const LOCATIONS = [
   { lat: 39.7392, lng: -104.9903, name: 'Denver, USA' },
   { lat: 41.8781, lng: -87.6298, name: 'Chicago, USA' },
   { lat: 25.7617, lng: -80.1918, name: 'Miami, USA' },
+  { lat: -23.5505, lng: -46.6333, name: 'São Paulo, Brazil' },
+  { lat: -33.8688, lng: 18.4241, name: 'Cape Town, South Africa' },
+  { lat: 31.2357, lng: 30.4415, name: 'Cairo, Egypt' },
+  { lat: 28.6139, lng: 77.2090, name: 'New Delhi, India' },
+  { lat: 13.7563, lng: 100.5018, name: 'Bangkok, Thailand' },
 ];
 
 const MAX_POINTS_PER_ROUND = 5000;
@@ -66,6 +72,8 @@ export default function Game() {
     locationName: '',
   });
 
+  const [isLoadingStreetView, setIsLoadingStreetView] = useState(false);
+
   const mapRef = useRef<google.maps.Map | null>(null);
   const streetViewRef = useRef<google.maps.StreetViewPanorama | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
@@ -85,19 +93,87 @@ export default function Game() {
     }
   }, [gameState.currentLocation]);
 
-  const selectRandomLocation = () => {
-    const location = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
+  const getRandomLocationNearby = (lat: number, lng: number): { lat: number; lng: number } => {
+    // Generate a random location within ~50km of the seed location
+    const latOffset = (Math.random() - 0.5) * 0.9; // ~100km range
+    const lngOffset = (Math.random() - 0.5) * 0.9;
+    return {
+      lat: lat + latOffset,
+      lng: lng + lngOffset,
+    };
+  };
 
-    setGameState((prev) => ({
-      ...prev,
-      currentLocation: { lat: location.lat, lng: location.lng },
-      guessLocation: null,
-      isGuessing: true,
-      roundComplete: false,
-      distance: null,
-      points: null,
-      locationName: location.name,
-    }));
+  const selectRandomLocation = async () => {
+    setIsLoadingStreetView(true);
+    
+    // Pick a random seed location
+    const seedLocation = SEED_LOCATIONS[Math.floor(Math.random() * SEED_LOCATIONS.length)];
+    
+    // Generate a nearby random location
+    const randomLocation = getRandomLocationNearby(seedLocation.lat, seedLocation.lng);
+
+    // Verify Street View coverage exists at this location
+    if (window.google) {
+      try {
+        const streetViewService = new google.maps.StreetViewService();
+        const response = await new Promise<google.maps.StreetViewPanoramaData | null>((resolve) => {
+          streetViewService.getPanorama(
+            { location: randomLocation, radius: 50000 },
+            (data, status) => {
+              if (status === google.maps.StreetViewStatus.OK && data) {
+                resolve(data);
+              } else {
+                resolve(null);
+              }
+            }
+          );
+        });
+
+        if (response && response.location && response.location.latLng) {
+          // Valid Street View found
+          const latLng = response.location.latLng;
+          const lat = latLng.lat();
+          const lng = latLng.lng();
+          setGameState((prev) => ({
+            ...prev,
+            currentLocation: { lat, lng },
+            guessLocation: null,
+            isGuessing: true,
+            roundComplete: false,
+            distance: null,
+            points: null,
+            locationName: seedLocation.name,
+          }));
+        } else {
+          // Fallback to seed location if nearby search fails
+          setGameState((prev) => ({
+            ...prev,
+            currentLocation: { lat: seedLocation.lat, lng: seedLocation.lng },
+            guessLocation: null,
+            isGuessing: true,
+            roundComplete: false,
+            distance: null,
+            points: null,
+            locationName: seedLocation.name,
+          }));
+        }
+      } catch (error) {
+        console.error('Error finding Street View:', error);
+        // Fallback to seed location
+        setGameState((prev) => ({
+          ...prev,
+          currentLocation: { lat: seedLocation.lat, lng: seedLocation.lng },
+          guessLocation: null,
+          isGuessing: true,
+          roundComplete: false,
+          distance: null,
+          points: null,
+          locationName: seedLocation.name,
+        }));
+      }
+    }
+    
+    setIsLoadingStreetView(false);
   };
 
   const initializeStreetView = (location: { lat: number; lng: number }) => {
@@ -329,11 +405,19 @@ export default function Game() {
         <div className="grid grid-cols-2 gap-4 h-full">
           {/* Left Side - Street View */}
           <div className="flex flex-col">
-            <Card className="overflow-hidden shadow-lg flex-1">
+            <Card className="overflow-hidden shadow-lg flex-1 relative">
               <div
                 ref={streetViewContainerRef}
                 className="w-full h-full bg-slate-900"
               />
+              {isLoadingStreetView && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
+                  <div className="text-white text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-2"></div>
+                    <p>Loading Street View...</p>
+                  </div>
+                </div>
+              )}
             </Card>
           </div>
 
