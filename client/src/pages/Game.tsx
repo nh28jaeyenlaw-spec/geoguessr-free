@@ -49,6 +49,7 @@ const LOCATIONS = [
 
 const MAX_POINTS_PER_ROUND = 5000;
 const MAX_TOTAL_SCORE = 25000; // 5 rounds × 5000 points
+const MAP_SIZE = 40075; // Earth's circumference in km (approximate map size for scoring)
 
 export default function Game() {
   const [, navigate] = useLocation();
@@ -176,15 +177,11 @@ export default function Game() {
   };
 
   const calculatePoints = (distance: number): number => {
-    if (distance < 1) return MAX_POINTS_PER_ROUND;
-    if (distance < 10) return 4500;
-    if (distance < 50) return 4000;
-    if (distance < 100) return 3500;
-    if (distance < 500) return 3000;
-    if (distance < 1000) return 2500;
-    if (distance < 2500) return 2000;
-    if (distance < 5000) return 1500;
-    return Math.max(0, MAX_POINTS_PER_ROUND - Math.floor(distance / 2));
+    // GeoGuessr-style exponential decay scoring
+    // Score = 5000 * e^(-10 * distance / map_size)
+    const exponent = -10 * distance / MAP_SIZE;
+    const score = MAX_POINTS_PER_ROUND * Math.exp(exponent);
+    return Math.round(Math.max(0, score));
   };
 
   const handleSubmitGuess = () => {
