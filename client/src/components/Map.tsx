@@ -157,6 +157,23 @@ export function MapView({
       zoomControl: true,
       streetViewControl: !disableStreetView,
       mapId: "DEMO_MAP_ID",
+      styles: [
+        {
+          featureType: "road",
+          elementType: "labels",
+          stylers: [{ visibility: "off" }]
+        },
+        {
+          featureType: "transit",
+          elementType: "labels",
+          stylers: [{ visibility: "off" }]
+        },
+        {
+          featureType: "poi",
+          elementType: "labels",
+          stylers: [{ visibility: "off" }]
+        }
+      ]
     });
     if (onMapReady) {
       onMapReady(map.current);

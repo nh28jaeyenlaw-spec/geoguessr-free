@@ -25,23 +25,24 @@ interface GameState {
     const streetViewElement = document.getElementById('street-view');
     if (!streetViewElement) return;
     
-    // Create a div overlay for ground-level blur only
+    // Remove existing blur overlay
     let blurOverlay = document.getElementById('street-view-blur-overlay');
     if (blurOverlay) blurOverlay.remove();
     
+    // Create fixed overlay for ground-level blur
     const overlay = document.createElement('div');
     overlay.id = 'street-view-blur-overlay';
-    overlay.style.position = 'absolute';
+    overlay.style.position = 'fixed';
     overlay.style.bottom = '0';
     overlay.style.left = '0';
     overlay.style.width = '100%';
-    overlay.style.height = '25%';
+    overlay.style.height = '25vh';
     overlay.style.pointerEvents = 'none';
     overlay.style.zIndex = '10';
-    overlay.style.backdropFilter = 'blur(6px)';
-    overlay.style.background = 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.05) 100%)';
+    overlay.style.backdropFilter = 'blur(8px)';
+    overlay.style.background = 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.08) 100%)';
     
-    streetViewElement.parentElement?.appendChild(overlay);
+    document.body.appendChild(overlay);
   };
 
   // Remove blur effect when needed
