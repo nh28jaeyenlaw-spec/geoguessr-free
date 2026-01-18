@@ -91,33 +91,59 @@ export default function Game() {
     if (apiReady && gameState.currentLocation && !streetViewRef.current) {
       const streetViewContainer = document.getElementById('street-view');
       if (streetViewContainer && window.google) {
-        streetViewRef.current = new window.google.maps.StreetViewPanorama(
-          streetViewContainer,
-          {
-            position: gameState.currentLocation,
-            pov: {
-              heading: Math.random() * 360,
-              pitch: Math.random() * 60 - 30,
-            },
-            zoom: 1,
-            addressControl: false,
-            fullscreenControl: false,
-            panControl: false,
-            zoomControl: false,
-            motionTrackingControl: false,
-            linksControl: false,
+        // Validate that this location has official Google Street View coverage
+        const svService = new window.google.maps.StreetViewService();
+        
+        svService.getPanorama(
+          { location: gameState.currentLocation },
+          (result: any, status: any) => {
+            if (status === window.google.maps.StreetViewStatus.OK && result) {
+              // Check if this is official Google Street View
+              // Official coverage has copyright that includes "Google"
+              const copyright = result.copyright || '';
+              const isOfficial = copyright.toLowerCase().includes('google');
+              
+              if (!isOfficial) {
+                console.warn('Non-official Street View detected, skipping location');
+                selectRandomLocation();
+                return;
+              }
+              
+              // Initialize Street View with official coverage
+              streetViewRef.current = new window.google.maps.StreetViewPanorama(
+                streetViewContainer,
+                {
+                  position: gameState.currentLocation,
+                  pov: {
+                    heading: Math.random() * 360,
+                    pitch: Math.random() * 60 - 30,
+                  },
+                  zoom: 1,
+                  addressControl: false,
+                  fullscreenControl: false,
+                  panControl: false,
+                  zoomControl: false,
+                  motionTrackingControl: false,
+                  linksControl: false,
+                }
+              );
+            } else {
+              console.warn('No Street View available for this location');
+              selectRandomLocation();
+            }
           }
         );
-
-        // Validation happens through the StreetViewService API
-        // which checks copyright field during getPanorama() calls
-        // Official Google Street View has proper copyright attribution
       }
     }
   }, [apiReady, gameState.currentLocation]);
 
   // Initialize map in collapsible panel when API is ready
   useEffect(() => {
+    if (!mapOpen && mapRef.current) {
+      // Clean up map when closing
+      mapRef.current = null;
+    }
+    
     if (mapOpen && mapContainerRef.current && window.google && !mapRef.current && apiReady) {
       const map = new window.google.maps.Map(mapContainerRef.current, {
         center: { lat: 20, lng: 0 },
@@ -127,8 +153,8 @@ export default function Game() {
       });
       mapRef.current = map;
 
-      // Add click listener to place guess marker
-      map.addListener('click', (event: google.maps.MapMouseEvent) => {
+      // Store map reference for click listener
+      const handleMapClick = (event: google.maps.MapMouseEvent) => {
         if (event.latLng && gameState.isGuessing && !gameState.roundComplete) {
           const lat = event.latLng.lat();
           const lng = event.latLng.lng();
@@ -151,9 +177,12 @@ export default function Game() {
             guessLocation: { lat, lng },
           }));
         }
-      });
+      };
+      
+      // Add click listener to place guess marker
+      map.addListener('click', handleMapClick);
     }
-  }, [mapOpen, apiReady]);
+  }, [mapOpen, apiReady, gameState.isGuessing, gameState.roundComplete]);
 
   const selectRandomLocation = () => {
     const randomLocation = STREET_VIEW_LOCATIONS[Math.floor(Math.random() * STREET_VIEW_LOCATIONS.length)];
@@ -387,13 +416,30 @@ export default function Game() {
                   ? '✓ Guess placed. Ready to submit?'
                   : 'Open the map to make your guess'}
               </p>
-              <Button
-                onClick={handleSubmitGuess}
-                disabled={!gameState.guessLocation}
-                className="w-full bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
-              >
-                Submit Guess
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={handleSubmitGuess}
+                  disabled={!gameState.guessLocation}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                >
+                  Submit Guess
+                </Button>
+                <Button
+                  onClick={() => {
+                    // Quick guess for testing - place guess at a random location
+                    const randomLat = Math.random() * 180 - 90;
+                    const randomLng = Math.random() * 360 - 180;
+                    setGameState((prev) => ({
+                      ...prev,
+                      guessLocation: { lat: randomLat, lng: randomLng },
+                    }));
+                  }}
+                  variant="outline"
+                  className="w-full border-gray-600 text-gray-300 hover:bg-gray-900"
+                >
+                  Quick Guess (Test)
+                </Button>
+              </div>
             </Card>
           </div>
         )}
