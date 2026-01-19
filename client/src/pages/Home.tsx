@@ -1,7 +1,7 @@
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Compass, Globe, MapPin, Trophy } from 'lucide-react';
+import { Compass, Github, Globe, MapPin, Trophy } from 'lucide-react';
 import { useLocation } from 'wouter';
 
 export default function Home() {
@@ -141,10 +141,20 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-300 py-8">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-sm">
-            GeoGuessr &copy; 2024. Powered by Google Maps and Street View API.
-          </p>
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between">
+            <p className="text-sm">
+              GeoGuessr &copy; 2024. Powered by Google Maps and Street View API.
+            </p>
+            <button
+              onClick={() => navigate('/game')}
+              className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors mt-4 sm:mt-0"
+              title="View on GitHub"
+            >
+              <Github className="w-5 h-5" />
+              <span className="text-sm">GitHub</span>
+            </button>
+          </div>
         </div>
       </footer>
     </div>
